@@ -11,12 +11,14 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
-import com.programminghut.realtime_object.ml.SsdMobilenetV11Metadata1
-import com.programminghut.realtime_object.ml.BestFloat32
+//import com.programminghut.realtime_object.ml.BestFloat32
+import com.programminghut.realtime_object.ml.Fingercrop20240307Float32
+import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
@@ -36,9 +38,9 @@ class MainActivity : AppCompatActivity() {
     lateinit var handler: Handler
     lateinit var cameraManager: CameraManager
     lateinit var textureView: TextureView
-    lateinit var model:SsdMobilenetV11Metadata1
-    lateinit var best32:BestFloat32
-
+//    lateinit var model:SsdMobilenetV11Metadata1
+//    lateinit var best32:BestFloat32
+    lateinit var fingercrop20240307Float32: Fingercrop20240307Float32
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,8 +48,11 @@ class MainActivity : AppCompatActivity() {
         get_permission()
 
         labels = FileUtil.loadLabels(this, "labels.txt")
-        imageProcessor = ImageProcessor.Builder().add(ResizeOp(300, 300, ResizeOp.ResizeMethod.BILINEAR)).build()
-        model = SsdMobilenetV11Metadata1.newInstance(this)
+        imageProcessor = ImageProcessor.Builder().add(ResizeOp(640, 640, ResizeOp.ResizeMethod.BILINEAR)).build()
+//        model = SsdMobilenetV11Metadata1.newInstance(this)
+//        best32 = BestFloat32.newInstance(this)
+        fingercrop20240307Float32 = Fingercrop20240307Float32.newInstance(this)
+
         val handlerThread = HandlerThread("videoThread")
         handlerThread.start()
         handler = Handler(handlerThread.looper)
@@ -67,16 +72,28 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onSurfaceTextureUpdated(p0: SurfaceTexture) {
-                println("aaaa")
-                bitmap = textureView.bitmap!!
-                var image = TensorImage.fromBitmap(bitmap)
-                image = imageProcessor.process(image)
 
-                val outputs = model.process(image)
-                val locations = outputs.locationsAsTensorBuffer.floatArray
-                val classes = outputs.classesAsTensorBuffer.floatArray
-                val scores = outputs.scoresAsTensorBuffer.floatArray
-                val numberOfDetections = outputs.numberOfDetectionsAsTensorBuffer.floatArray
+                bitmap = textureView.bitmap!!
+                var tensorImage =  TensorImage(DataType.FLOAT32)
+                tensorImage.load(bitmap)
+//                var image = TensorImage.fromBitmap(bitmap)
+
+                Log.d("OUTPUTS", "${tensorImage.dataType}")
+
+                tensorImage = imageProcessor.process(tensorImage)
+
+//                val outputs = model.process(image)
+
+                val outputs = fingercrop20240307Float32.process(tensorImage)
+                outputs.classesAsCategoryList;
+//                var category =  outputs.outputAsCategoryList;
+
+//                println("outputs data : ${outputs.outputAsCategoryList}")
+
+//                val locations = outputs.locationsAsTensorBuffer.floatArray
+//                val classes = outputs.classesAsTensorBuffer.floatArray
+//                val scores = outputs.scoresAsTensorBuffer.floatArray
+//                val numberOfDetections = outputs.numberOfDetectionsAsTensorBuffer.floatArray
 
                 var mutable = bitmap.copy(Bitmap.Config.ARGB_8888, true)
                 val canvas = Canvas(mutable)
@@ -86,18 +103,18 @@ class MainActivity : AppCompatActivity() {
                 paint.textSize = h/15f
                 paint.strokeWidth = h/85f
                 var x = 0
-                scores.forEachIndexed { index, fl ->
-
-                    x = index
-                    x *= 4
-                    if(fl > 0.5){ //카메라 기능 만들면 끝
-                        paint.setColor(colors.get(index))
-                        paint.style = Paint.Style.STROKE
-                        canvas.drawRect(RectF(locations.get(x+1)*w, locations.get(x)*h, locations.get(x+3)*w, locations.get(x+2)*h), paint)
-                        paint.style = Paint.Style.FILL
-                        canvas.drawText(labels.get(classes.get(index).toInt())+" "+fl.toString(), locations.get(x+1)*w, locations.get(x)*h, paint)
-                    }
-                }
+//                scores.forEachIndexed { index, fl ->
+//
+//                    x = index
+//                    x *= 4
+//                    if(fl > 0.5){ //카메라 기능 만들면 끝
+//                        paint.setColor(colors.get(index))
+//                        paint.style = Paint.Style.STROKE
+//                        canvas.drawRect(RectF(locations.get(x+1)*w, locations.get(x)*h, locations.get(x+3)*w, locations.get(x+2)*h), paint)
+//                        paint.style = Paint.Style.FILL
+//                        canvas.drawText(labels.get(classes.get(index).toInt())+" "+fl.toString(), locations.get(x+1)*w, locations.get(x)*h, paint)
+//                    }
+//                }
 
                 imageView.setImageBitmap(mutable)
 
@@ -111,7 +128,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        model.close()
+//        model.close()
+//        best32.close()
+        fingercrop20240307Float32.close();
     }
 
     @SuppressLint("MissingPermission")
