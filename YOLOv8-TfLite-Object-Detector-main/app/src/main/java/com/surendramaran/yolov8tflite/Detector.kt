@@ -1,10 +1,9 @@
 package com.surendramaran.yolov8tflite
 
-//For GPU
 
+import android.os.Build
 import android.content.Context
 import android.graphics.Bitmap
-import android.os.Build
 import android.os.SystemClock
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
@@ -38,6 +37,8 @@ class Detector(
     private var numChannel = 0
     private var numElements = 0
 
+    private var runtimeMode = "CPU Delegate Thread 4"
+
     private val imageProcessor = ImageProcessor.Builder()
         .add(NormalizeOp(INPUT_MEAN, INPUT_STANDARD_DEVIATION))
         .add(CastOp(INPUT_IMAGE_TYPE))
@@ -47,15 +48,28 @@ class Detector(
         val model = FileUtil.loadMappedFile(context, modelPath)
 
         val options = Interpreter.Options()
-        var nnApiDelegate: NnApiDelegate? = null
-// Initialize interpreter with NNAPI delegate for Android Pie or above
-// Initialize interpreter with NNAPI delegate for Android Pie or above
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            nnApiDelegate = NnApiDelegate()
-            options.addDelegate(nnApiDelegate)
-        }
 
 
+//        var nnApiDelegate: NnApiDelegate? = null
+//// Initialize interpreter with NNAPI delegate for Android Pie or above
+//// Initialize interpreter with NNAPI delegate for Android Pie or above
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+//            nnApiDelegate = NnApiDelegate()
+//            options.addDelegate(nnApiDelegate)
+//            runtimeMode = "NNAPI Delegate"
+//        }else{
+//            if (CompatibilityList().isDelegateSupportedOnThisDevice) {
+//                // if the device has a supported GPU, add the GPU delegate
+//                val delegateOptions: GpuDelegate.Options = CompatibilityList().bestOptionsForThisDevice
+//                val gpuDelegate = GpuDelegate(delegateOptions)
+//                options.addDelegate(gpuDelegate)
+//                runtimeMode = "GPU Delegate"
+//            } else {
+//                // if the GPU is not supported, run on 4 threads
+//                options.setNumThreads(4)
+//            }
+//        }
+        options.setNumThreads(4)
         interpreter = Interpreter(model, options)
 
         val inputShape = interpreter?.getInputTensor(0)?.shape() ?: return
@@ -135,7 +149,7 @@ class Detector(
         }
 
         inferenceTime = SystemClock.uptimeMillis() - inferenceTime
-        detectorListener.onDetect(bestBoxes, inferenceTime)
+        detectorListener.onDetect(bestBoxes, inferenceTime, runtimeMode)
     }
 
     private fun bestBox(array: FloatArray) : List<BoundingBox>? {
@@ -210,7 +224,7 @@ class Detector(
 
     interface DetectorListener {
         fun onEmptyDetect()
-        fun onDetect(boundingBoxes: List<BoundingBox>, inferenceTime: Long)
+        fun onDetect(boundingBoxes: List<BoundingBox>, inferenceTime: Long, mode : String)
     }
 
     companion object {

@@ -43,7 +43,29 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
-<!--    <ImageView-->
+    <TextView
+        android:id="@+id/modeName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="32dp"
+        android:background="@color/white"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="MODE" />
+
+    <TextView
+        android:id="@+id/meanText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="48dp"
+        android:background="#ffffff"
+        android:text="평균"
+        app:layout_constraintEnd_toStartOf="@+id/inferenceTime"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!--    <ImageView-->
 <!--        android:id="@+id/ivTop"-->
 <!--        android:layout_width="match_parent"-->
 <!--        android:layout_height="match_parent"/>-->

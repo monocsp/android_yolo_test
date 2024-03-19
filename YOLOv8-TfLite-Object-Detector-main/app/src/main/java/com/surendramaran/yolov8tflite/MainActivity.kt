@@ -32,15 +32,17 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var detector: Detector
 
+    private var inferenceTimes : MutableList<Long> = mutableListOf<Long>()
+
     private lateinit var cameraExecutor: ExecutorService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        detector = Detector(baseContext, MODEL_PATH, LABELS_PATH, this)
-        detector.setup()
+        startDetect()
+//        detector = Detector(baseContext, MODEL_PATH, LABELS_PATH, this)
+//        detector.setup()
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -49,6 +51,10 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+
+        binding.modeName.setOnClickListener{
+
+        }
     }
 
     private fun startCamera() {
@@ -164,13 +170,34 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
         binding.overlay.invalidate()
     }
 
-    override fun onDetect(boundingBoxes: List<BoundingBox>, inferenceTime: Long) {
+    override fun onDetect(boundingBoxes: List<BoundingBox>, inferenceTime: Long, mode : String) {
         runOnUiThread {
+            inferenceTimes.add(inferenceTime)
+            val inferenceTotalTime = inferenceTimes.sum()
+            val average = if (inferenceTimes.isNotEmpty()) inferenceTotalTime.toDouble() / inferenceTimes.size else 0.0
+            binding.modeName.text = "${mode}ms"
+            binding.meanText.text = "평균 : "+String.format("%.1f", average) + "ms"
             binding.inferenceTime.text = "${inferenceTime}ms"
+
+
+
+
             binding.overlay.apply {
                 setResults(boundingBoxes)
                 invalidate()
             }
         }
     }
+
+    fun switchingMode(){
+        detector.clear()
+    }
+
+    fun startDetect(){
+        detector = Detector(baseContext, MODEL_PATH, LABELS_PATH, this)
+        detector.setup()
+
+    }
+
+
 }
